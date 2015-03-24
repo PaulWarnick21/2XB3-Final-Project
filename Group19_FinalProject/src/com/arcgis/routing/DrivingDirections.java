@@ -298,7 +298,8 @@ public class DrivingDirections {
 		}	
 	}
 
-	private void showResult(RouteResult result) {
+	// --------------------------------- TODO --------------------------------- // 
+	private void showResult(RouteResult result) { 
 		if (result != null) {
 		    // get the routing directions from the top route
 		    Route topRoute = result.getRoutes().get(0);
@@ -306,14 +307,22 @@ public class DrivingDirections {
 	
 		    // add route segments to the route layer
 		    for (RouteDirection rd : topRoute.getRoutingDirections()) {
-		      HashMap<String, Object> attribs = new HashMap<String, Object>();
-		      attribs.put("text", rd.getText());
-		      attribs.put("time", Double.valueOf(rd.getMinutes()));
-		      attribs.put("length", Double.valueOf(rd.getLength()));
-		      Graphic a = new Graphic(rd.getGeometry(), routeSymbol, attribs);
-		      int graphicID = routeSegmentsLayer.addGraphic(a);
-		      stepIDs.add(Integer.valueOf(graphicID));
+		    	HashMap<String, Object> attribs = new HashMap<String, Object>();
+		    	attribs.put("text", rd.getText());
+		    	attribs.put("time", Double.valueOf(rd.getMinutes()));
+		    	attribs.put("length", Double.valueOf(rd.getLength()));
+		      
+		    	// --------------------------------- TODO --------------------------------- //
+		      
+		    	if (rd.getManeuver().toString().contains("Left")) { System.out.println(rd.getManeuver().toString()); }
+		    	//System.out.println(rd.getManeuver().toString());
+		      
+		    	// --------------------------------- TODO --------------------------------- //
+		    	Graphic a = new Graphic(rd.getGeometry(), routeSymbol, attribs);
+		    	int graphicID = routeSegmentsLayer.addGraphic(a);
+		    	stepIDs.add(Integer.valueOf(graphicID));
 		    }
+		// --------------------------------- TODO --------------------------------- // 
 	
 		    // add the whole-route graphic
 		    Graphic routeGraphic = new Graphic(topRoute.getRouteGraphic().getGeometry(),
