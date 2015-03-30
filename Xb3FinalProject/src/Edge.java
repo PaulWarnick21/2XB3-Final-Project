@@ -1,5 +1,5 @@
 
-public class Edge<pulbic> {
+public class Edge {
 	private final int v;
 	private final int w;
 	private final double weight;

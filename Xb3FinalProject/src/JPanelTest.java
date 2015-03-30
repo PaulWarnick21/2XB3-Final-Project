@@ -6,6 +6,8 @@ import java.awt.Insets;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Random;
 
 import javax.swing.JFrame;
@@ -23,7 +25,7 @@ class Surface extends JPanel {
 
         String singleLine = "";
 		
-		BufferedReader in1 = new BufferedReader(new FileReader("Data/TG.txt"));//reads the input file
+		BufferedReader in1 = new BufferedReader(new FileReader("Data/OLCoordinates.txt"));//reads the input file
 
 		int count = 0;
 		while(in1.readLine()!=null){//counts number of lines in the file
@@ -31,7 +33,9 @@ class Surface extends JPanel {
 		}
 		in1.close();
 		
-		BufferedReader in2 = new BufferedReader(new FileReader("Data/TG.txt"));
+		EdgeWeightedGraph graph = new EdgeWeightedGraph(count);
+		
+		BufferedReader in2 = new BufferedReader(new FileReader("Data/OLCoordinates.txt"));
 		
 		int count2 = 0;
 		
@@ -60,7 +64,7 @@ class Surface extends JPanel {
 		
         singleLine = "";
 		
-		BufferedReader in3 = new BufferedReader(new FileReader("Data/TG2.txt"));//reads the input file
+		BufferedReader in3 = new BufferedReader(new FileReader("Data/OLRoads.txt"));//reads the input file
 
 		count = 0;
 		while(in3.readLine()!=null){//counts number of lines in the file
@@ -68,12 +72,12 @@ class Surface extends JPanel {
 		}
 		in3.close();
 		
-		BufferedReader in4 = new BufferedReader(new FileReader("Data/TG2.txt"));
+//		EdgeWeightedGraph graph = new EdgeWeightedGraph(count);
+		
+		BufferedReader in4 = new BufferedReader(new FileReader("Data/OLRoads.txt"));
 		
 		count2 = 0;
-		
-		EdgeWeightedGraph graph = new EdgeWeightedGraph(count);
-		
+				
 		while(count2!=count){
 			singleLine = in4.readLine();
 			String[] temp = singleLine.split(" ");
@@ -87,14 +91,53 @@ class Surface extends JPanel {
 			double y2= data2[1];
 			
 			Edge e = new Edge(Integer.parseInt(temp[1]), Integer.parseInt(temp[2]), Double.parseDouble(temp[3]));
+			Edge e2 = new Edge(Integer.parseInt(temp[2]), Integer.parseInt(temp[1]), Double.parseDouble(temp[3]));
 			graph.addEdge(e);
+			graph.addEdge(e2);
 			g2d.drawLine((int)x1+150, (int)y1+10, (int)x2+150, (int)y2+10);
 			
 			count2++;
 		}
 		in4.close();
-    }
-
+		
+        DijkstraSP sp = new DijkstraSP(graph, 0);
+        
+        int counter = 0;
+        for (int t = 0; t < graph.V(); t++) {
+            if (sp.hasPathTo(t)) {
+                System.out.printf("%d to %d (%.2f)  ", 0, t, sp.distTo(t));
+                if (sp.hasPathTo(t)) {
+                	for (Edge e : sp.pathTo(t)) {
+                    	counter++;   
+                		System.out.print("");
+                    }
+                	
+                	Edge[] edgeArray = new Edge[counter];
+                	int tempcount = 0;
+                	
+                	for (Edge e : sp.pathTo(t)) {
+                    	edgeArray[tempcount] = e;
+                    	tempcount++;
+                	}
+                	
+                	Collections.reverse(Arrays.asList(edgeArray));
+                	for (int i = 0; i < edgeArray.length; i++)
+                	{
+                		if (edgeArray[i] != null)
+                		{
+                			System.out.print(edgeArray[i] + "  ");
+                		}
+                		
+                	}
+                }
+                System.out.println();
+            }
+            else {
+            	System.out.printf("%d to %d         no path\n", 0, t);
+            }
+        }
+        count =0;
+ } 
     @Override
     public void paintComponent(Graphics g) {
 
