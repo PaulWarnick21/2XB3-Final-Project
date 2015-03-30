@@ -72,6 +72,8 @@ class Surface extends JPanel {
 		
 		count2 = 0;
 		
+		EdgeWeightedGraph graph = new EdgeWeightedGraph(count);
+		
 		while(count2!=count){
 			singleLine = in4.readLine();
 			String[] temp = singleLine.split(" ");
@@ -83,6 +85,9 @@ class Surface extends JPanel {
 			
 			double x2= data2[0];
 			double y2= data2[1];
+			
+			Edge e = new Edge(Integer.parseInt(temp[1]), Integer.parseInt(temp[2]), Double.parseDouble(temp[3]));
+			graph.addEdge(e);
 			g2d.drawLine((int)x1+150, (int)y1+10, (int)x2+150, (int)y2+10);
 			
 			count2++;
