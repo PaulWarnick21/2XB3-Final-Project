@@ -43,7 +43,6 @@ import com.esri.toolkit.overlays.DrawingOverlay;
 import com.esri.toolkit.overlays.DrawingOverlay.DrawingMode;
 import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Polyline;
-import com.esri.core.internal.tasks.ags.I;
 import com.esri.core.map.Graphic;
 import com.esri.core.symbol.SimpleLineSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
@@ -61,6 +60,7 @@ public class MapGenerator {
   private DrawingOverlay myDrawingOverlay; //Overlay to draw your route stops
   private GraphicsLayer stopsLayer;
   private GraphicsLayer streetsLayer;
+  private GraphicsLayer routeLayer;
   private NAFeaturesAsFeature stops = new NAFeaturesAsFeature();
   private JButton destinationButton;
   private JButton startPointButton;
@@ -80,8 +80,7 @@ public class MapGenerator {
   private DijkstraSP shortestPathTree;
   private IntersectionsBST intersectionTree;
   private int startPoint;
-  private int endPoint;
-  
+  private int endPoint;  
   
   // generates the map
   public MapGenerator() throws IOException {
@@ -107,8 +106,8 @@ public class MapGenerator {
     // envelope for ocean
     map.setExtent(new Envelope(-16732452, 4533753, -16719762, 4619957.78));
     
-    // envelope for stockton // TODO remove?
-    //map.setExtent(new Envelope(-13544000, 4538000, -13461000, 4626000));
+    routeLayer = new GraphicsLayer();
+    map.getLayers().add(routeLayer);
     
     streetsLayer = new GraphicsLayer();
     map.getLayers().add(streetsLayer);
@@ -151,6 +150,7 @@ public class MapGenerator {
 					  myDrawingOverlay.setEnabled(true);
 					  // reset graphic layers, stop features and global variables
 					  stopCounter = 2;
+					  routeLayer.removeAll();
 					  stopsLayer.removeAll();
 					  stops.clearFeatures();
 					  HashMap<String, Object> attributes = new HashMap<String, Object>();
@@ -161,12 +161,10 @@ public class MapGenerator {
 					      attributes);
 				}
 				else {
-					//System.out.println(getClosestIntersection(startPointLatEsri, startPointLongEsri)[0] + " " + getClosestIntersection(startPointLatEsri, startPointLongEsri)[1]); // TODO change to save coord
 					double startClosestNodeLat = getClosestIntersection(startPointLatEsri, startPointLongEsri)[0];
 					double startClosestNodeLong = getClosestIntersection(startPointLatEsri, startPointLongEsri)[1];
 					intersectionTree.findNodeID(intersectionTree.root, startClosestNodeLat, startClosestNodeLong);
 					startPoint = intersectionTree.closestNode;
-					//System.out.println(intersectionTree.findNodeID(intersectionTree.root, startClosestNodeLat, startClosestNodeLong));
 				}
 			}
 			
@@ -194,6 +192,7 @@ public class MapGenerator {
 					  myDrawingOverlay.setEnabled(true);
 					  // reset graphic layers, stop features and global variables
 					  stopCounter = 2;
+					  routeLayer.removeAll();
 					  stopsLayer.removeAll();
 					  stops.clearFeatures();
 					  HashMap<String, Object> attributes = new HashMap<String, Object>();
@@ -209,7 +208,6 @@ public class MapGenerator {
 					double destinationClosestNodeLong = getClosestIntersection(destinationLatEsri, destinationLongEsri)[1];
 					intersectionTree.findNodeID(intersectionTree.root, destinationClosestNodeLat, destinationClosestNodeLong);
 					endPoint = intersectionTree.closestNode;
-					getRoute(graph, startPoint, endPoint);
 				}
 			}
 		}
@@ -253,9 +251,6 @@ public class MapGenerator {
 		esriIntersectionCoordinates[coordinateCounter][0] = (-150.528512 + 0.000054142 * (Double.parseDouble(currentLine[1])));
 		esriIntersectionCoordinates[coordinateCounter][1] = (38.247154 - 0.0000561075 * (Double.parseDouble(currentLine[2])));
 		
-		// coords for stockton
-		//xyCoordinates[coordinateCounter][0]= (-121.528412 + 0.000054152 * (Double.parseDouble(esriCoordsArray[1])));
-		//xyCoordinates[coordinateCounter][1]= (38.247154 - 0.0000561075 * (Double.parseDouble(esriCoordsArray[2])));
 		coordinateCounter++;
 	}
 	
@@ -316,10 +311,24 @@ public class MapGenerator {
 	}
 	
 	inputStreets.close();
-	
-	///////////////////////getRoute(graph, 0, 20);
   }
   
+  // adds the optimal route to the map 
+  private void displayRoute(Edge[] route) {
+	  Polyline routeStreet = new Polyline();
+	  SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.ORANGE, 10.0f);
+	  double[] latLongArrayStartPointRoute = convertToEsriMeters((intersectionTree.search(route[0].either())[0]), (intersectionTree.search(route[0].either())[1])); 
+	  double[] latLongArrayEndPointRoute; 
+	  routeStreet.startPath(latLongArrayStartPointRoute[0], latLongArrayStartPointRoute[1]);
+	  
+	  for (int i = 0; i < route.length; i++) {
+		  latLongArrayEndPointRoute = convertToEsriMeters((intersectionTree.search(route[i].other(route[i].either()))[0]), (intersectionTree.search(route[i].other(route[i].either()))[1]));
+		  routeStreet.lineTo(latLongArrayEndPointRoute[0], latLongArrayEndPointRoute[1]);
+	  }
+	  routeLayer.addGraphic(new Graphic(routeStreet, routeSymbol, 0));
+  }
+  
+  // determines the closest intersection to where the user has clicked
   private double[] getClosestIntersection(double esriLat, double esriLong) {
 	  double[] closestIntersection = new double[2];
 	  double distance = 0;
@@ -348,19 +357,21 @@ public class MapGenerator {
 	  
 	  return closestIntersection;
   }
-	
+  
+  // uses dijkstras algorithm to find the optimal route in the graph from user chose start, to destination
   @SuppressWarnings("unused")
   private void getRoute(EdgeWeightedGraph g, int start, int destination){
 	  int pathLengthCounter = 0;
+	  Edge[] edgeArray = {};
 	  shortestPathTree = new DijkstraSP(g, start);
-	  System.out.printf("%d to %d (%.2f)  ", start, destination, shortestPathTree.distTo(destination));
+	  //System.out.printf("%d to %d (%.2f)  ", start, destination, shortestPathTree.distTo(destination));
 	  
 	  if (shortestPathTree.hasPathTo(destination)) {
 		  for (Edge currentEdge : shortestPathTree.pathTo(destination)) {
           	pathLengthCounter++;
-      		System.out.print("");
+      		//System.out.print("");
           }
-		   	Edge[] edgeArray = new Edge[pathLengthCounter];
+		   	edgeArray = new Edge[pathLengthCounter];
         	int setCurrentEdgeCounter = 0;
         	
         	for (Edge currentEdge : shortestPathTree.pathTo(destination)) {
@@ -369,17 +380,9 @@ public class MapGenerator {
         	}
         	
         	Collections.reverse(Arrays.asList(edgeArray));
-        	for (int i = 0; i < edgeArray.length; i++) {
-        		if (edgeArray[i] != null) {
-        			System.out.print(edgeArray[i] + "  ");
-        		}	            		
-        	}
-        	System.out.println();
-        }	  
-        else {
-        	System.out.printf("%d to %d         no path\n", 0, destination);
-        }
-        pathLengthCounter = 0;
+	  }
+	  	pathLengthCounter = 0;
+	  	displayRoute(edgeArray);
   }
   
   // converts an input latitude longitude to ESRI meters to display on the map properly
@@ -398,7 +401,8 @@ public class MapGenerator {
 	      esriCoordsArray[1] = latitude;
 	      return esriCoordsArray;
   }
-	
+  
+  // converts from esri meters to regular latitude
   private static double[] convertFromEsriMeters(double[] esri) {
 		double x = 0;
 		double y = 0;
@@ -464,6 +468,7 @@ public class MapGenerator {
 			    destinationButton.setEnabled(false);
 			    solveRouteButton.setEnabled(false);
 			    myDrawingOverlay.setEnabled(false);
+			    getRoute(graph, startPoint, endPoint);
 			  }
 			});
 		toolBar.add(solveRouteButton);
@@ -481,6 +486,7 @@ public class MapGenerator {
 			    myDrawingOverlay.setEnabled(true);
 			    // reset graphic layers, stop features and global variables
 			    stopCounter = 2;
+			    routeLayer.removeAll();
 			    stopsLayer.removeAll();
 			    stops.clearFeatures();
 			    HashMap<String, Object> attributes = new HashMap<String, Object>();
