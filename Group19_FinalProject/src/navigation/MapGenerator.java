@@ -16,6 +16,8 @@ import graph.Edge;
 import graph.EdgeWeightedGraph;
 
 
+
+
 // standard java imports
 import java.awt.Color;
 import java.awt.Component;
@@ -34,12 +36,16 @@ import java.util.Collections;
 import java.util.HashMap;
 
 
+
+
 // swing imports
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
+
+
 
 
 // arcGIS imports
@@ -50,6 +56,7 @@ import com.esri.toolkit.overlays.DrawingOverlay.DrawingMode;
 import com.esri.core.geometry.Envelope;
 import com.esri.core.geometry.Polyline;
 import com.esri.core.map.Graphic;
+import com.esri.core.symbol.PictureMarkerSymbol;
 import com.esri.core.symbol.SimpleLineSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol.Style;
@@ -59,7 +66,7 @@ import com.esri.map.JMap;
 import com.esri.map.MapOptions;
 import com.esri.map.MapOptions.MapType;
 
-public class MapGenerator {
+public class MapGenerator { // TODO sort variables, keep only needed fields (make the rest local)
 	private JFrame window;
 	private JMap map;
 	private DrawingOverlay myDrawingOverlay; //Overlay to draw your route stops
@@ -79,6 +86,9 @@ public class MapGenerator {
 	private static final String RESET_BUTTON = " Reset "; // reset button string
 	private static final String  STARTPOINT_BUTTON = " Choose Start Point "; // reset button string
 	private static final String  DESTINATION_BUTTON = " Choose Destination "; // reset button string
+	private static final String	STARTPOINT_IMAGE = "http://www.tactranconnect.com/images/icon_start.png"; // url for start image
+	private static final String	STOP_IMAGE = "http://www.tactranconnect.com/images/mapicons/marker_incidents.png"; // TODO implement multiple stops
+	private static final String	DESTINATION_IMAGE = "http://www.tactranconnect.com/images/icon_end.png"; // url for destination image
 	private EdgeWeightedGraph graph;
 	private static double[] esriCoordsArray;
 	private static double[][] esriIntersectionCoordinates;
@@ -86,6 +96,8 @@ public class MapGenerator {
 	private IntersectionsBST intersectionTree;
 	private int startPoint;
 	private int endPoint;  
+	private PictureMarkerSymbol startSymbol = new PictureMarkerSymbol(STARTPOINT_IMAGE); // creates a symbol with the start point url
+	private PictureMarkerSymbol destinationSymbol = new PictureMarkerSymbol(DESTINATION_IMAGE); // same for destination
   
 	// generates the map
 	public MapGenerator() throws IOException {
@@ -374,7 +386,7 @@ public class MapGenerator {
 		return closestIntersection;
 	}
   
-	// uses dijkstras algorithm to find the optimal route in the graph from user chose start, to destination
+	// uses Dijkstra's algorithm to find the optimal route in the graph from user chose start, to destination
 	@SuppressWarnings("unused")
 	private void getRoute(EdgeWeightedGraph g, int start, int destination){
 		int pathLengthCounter = 0;
@@ -403,6 +415,16 @@ public class MapGenerator {
 	  	displayRoute(edgeArray);
 	}
   
+	private boolean leftTurnChecker(Edge[] edgeArray){
+		int counter = 0;
+		while (counter!= edgeArray.length){
+			
+			counter++;
+		}
+		
+		return false;
+	}
+	
 	// converts an input latitude longitude to ESRI meters to display on the map properly
 	private double[] convertToEsriMeters(double longitude, double latitude) {
 		if ((Math.abs(longitude) > 180 || Math.abs(latitude) > 90)) { return null; }
@@ -449,11 +471,12 @@ public class MapGenerator {
 		startPointButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				startSymbol.setOffsetY((float) 16); // shifts the picture upwards
 				HashMap<String, Object> attributes = new HashMap<String, Object>();
 			    attributes.put("type", "Start");
 			    drawingOverlay.setUp(
 			        DrawingMode.POINT,
-			        new SimpleMarkerSymbol(Color.GREEN, 25, Style.X),
+			        startSymbol, // the picutre for the stop
 			        attributes);
 			}
 		});
@@ -464,11 +487,12 @@ public class MapGenerator {
 		destinationButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				destinationSymbol.setOffsetY((float) 16); // shifts the picture upwards
 				HashMap<String, Object> attributes = new HashMap<String, Object>();
 			    attributes.put("type", "Destination");
 			    drawingOverlay.setUp(
 			        DrawingMode.POINT,
-			        new SimpleMarkerSymbol(Color.BLUE, 25, Style.X),
+			        destinationSymbol, // the picture for the stop
 			        attributes);
 			    destinationButton.setEnabled(false);
 			}
