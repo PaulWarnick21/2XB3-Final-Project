@@ -18,6 +18,7 @@ import graph.EdgeWeightedGraph;
 
 
 
+
 // standard java imports
 import java.awt.Color;
 import java.awt.Component;
@@ -38,12 +39,14 @@ import java.util.HashMap;
 
 
 
+
 // swing imports
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
+
 
 
 
@@ -411,14 +414,64 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
         	Collections.reverse(Arrays.asList(edgeArray));
 		}
 		
+		leftTurnChecker(edgeArray);
+		
 	  	pathLengthCounter = 0;
 	  	displayRoute(edgeArray);
 	}
   
 	private boolean leftTurnChecker(Edge[] edgeArray){
 		int counter = 0;
-		while (counter!= edgeArray.length){
+		while (counter!= (edgeArray.length)-1){
+			Edge edge1 = edgeArray[counter];
+			Edge edge2 = edgeArray[counter+1];
+			int v1 = edge1.either();
+			int fixed = edge1.getW();
+			int w1 = edge2.getW();
 			
+			double[] coor1 = intersectionTree.search(v1);
+			double[] fixedcoor = intersectionTree.search(fixed);
+			double[] coor2 = intersectionTree.search(w1);
+			
+			double x1 = coor1[0]/0.000054142 - -150.528512;
+			double y1 = coor1[1]/0.0000561075 +38.247154 ;
+			
+			double fixedX = fixedcoor[0]/0.000054142 - -150.528512;
+			double fixedY = fixedcoor[1]/0.0000561075 +38.247154 ;
+			
+			double x2 = coor2[0]/0.000054142 - -150.528512;
+			double y2 = coor2[1]/0.0000561075 +38.247154 ;
+			
+			
+			double angle1 = Math.atan2(y1 - fixedY, x1 - fixedX);
+			double angle2 = Math.atan2(y2 - fixedY, y1 - fixedX);
+			
+			double bearing = (angle1-angle2);
+			
+			/*if( bearing == 0){
+				System.out.println("Straight " + bearing);
+			}
+			else if(bearing < Math.PI){
+				System.out.println("Left " + bearing);
+			}
+			else{
+				System.out.println("Right " + bearing);
+			}
+			double dx = x2-x1;
+			double dy = y2-y1;
+			double bearing = 0;
+			if (dx > 0){
+				bearing = 90 - Math.atan(dy/dx);
+			}
+			if (dx < 0){
+				bearing = 270 - Math.atan(dy/dx);
+			}
+			if (dx == 0){
+				if (dy > 0){bearing = 0;}
+				if (dy < 0){bearing = 180;}
+			}
+			bearing = 90 - (180/Math.PI)*Math.atan2(y2-y1, x2-x1);*/
+			System.out.println(counter+ ": "+ " "+ Math.toDegrees(angle1) + " " + Math.toDegrees(angle2));
 			counter++;
 		}
 		

@@ -25,6 +25,8 @@ public class Edge {
 	
 	public int either(){ return v; }
 	
+	public int getW() {return w;}
+	
 	public int other(int vertex){
 		if(vertex == v){ return w; }
 		
