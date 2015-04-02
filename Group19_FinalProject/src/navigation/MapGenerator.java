@@ -420,59 +420,32 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	  	displayRoute(edgeArray);
 	}
   
-	private boolean leftTurnChecker(Edge[] edgeArray){
-		int counter = 0;
-		while (counter!= (edgeArray.length)-1){
-			Edge edge1 = edgeArray[counter];
-			Edge edge2 = edgeArray[counter+1];
-			int v1 = edge1.either();
-			int fixed = edge1.getW();
-			int w1 = edge2.getW();
+	private boolean leftTurnChecker(Edge[] shortestPath){ // TODO check for previous edge compared to current to determine which type of turn it is, check other turns to determine if straight or what options are	
+		for (int i = 1; i < shortestPath.length; i++) {
+			Edge firstEdge = shortestPath[i - 1];
+			Edge secondEdge = shortestPath[i];
+			int firstEdgeV = firstEdge.either();
+			int firstEdgeW = firstEdge.other(firstEdge.either());
+			int secondEdgeV = secondEdge.other(secondEdge.either());
 			
-			double[] coor1 = intersectionTree.search(v1);
-			double[] fixedcoor = intersectionTree.search(fixed);
-			double[] coor2 = intersectionTree.search(w1);
+			double[] firstIntersection = intersectionTree.search(firstEdgeV);
+			double[] middleIntersection = intersectionTree.search(firstEdgeW);
+			double[] lastIntersection = intersectionTree.search(secondEdgeV);
 			
-			double x1 = coor1[0]/0.000054142 - -150.528512;
-			double y1 = coor1[1]/0.0000561075 +38.247154 ;
+			double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+			double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
 			
-			double fixedX = fixedcoor[0]/0.000054142 - -150.528512;
-			double fixedY = fixedcoor[1]/0.0000561075 +38.247154 ;
+			double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+			double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
 			
-			double x2 = coor2[0]/0.000054142 - -150.528512;
-			double y2 = coor2[1]/0.0000561075 +38.247154 ;
+			double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
+			double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
 			
+			double firstEdgeAngle = Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX));
+			double secondEdgeAngle = Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX));
 			
-			double angle1 = Math.atan2(y1 - fixedY, x1 - fixedX);
-			double angle2 = Math.atan2(y2 - fixedY, y1 - fixedX);
-			
-			double bearing = (angle1-angle2);
-			
-			/*if( bearing == 0){
-				System.out.println("Straight " + bearing);
-			}
-			else if(bearing < Math.PI){
-				System.out.println("Left " + bearing);
-			}
-			else{
-				System.out.println("Right " + bearing);
-			}
-			double dx = x2-x1;
-			double dy = y2-y1;
-			double bearing = 0;
-			if (dx > 0){
-				bearing = 90 - Math.atan(dy/dx);
-			}
-			if (dx < 0){
-				bearing = 270 - Math.atan(dy/dx);
-			}
-			if (dx == 0){
-				if (dy > 0){bearing = 0;}
-				if (dy < 0){bearing = 180;}
-			}
-			bearing = 90 - (180/Math.PI)*Math.atan2(y2-y1, x2-x1);*/
-			System.out.println(counter+ ": "+ " "+ Math.toDegrees(angle1) + " " + Math.toDegrees(angle2));
-			counter++;
+			System.out.println(Math.toDegrees(firstEdgeAngle)); // TODO angles are reversed quad 1 = -90 > 0 : 2 = -90 > 180 : 3 = 180 > 90 : 4 = 90 > 0
+			System.out.println(Math.toDegrees(secondEdgeAngle));
 		}
 		
 		return false;
