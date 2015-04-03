@@ -15,10 +15,6 @@ import graph.DijkstraSP;
 import graph.Edge;
 import graph.EdgeWeightedGraph;
 
-
-
-
-
 // standard java imports
 import java.awt.Color;
 import java.awt.Component;
@@ -36,20 +32,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
-
-
-
-
 // swing imports
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
-
-
-
-
 
 // arcGIS imports
 import com.esri.toolkit.overlays.DrawingCompleteEvent;
@@ -90,7 +78,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	private static final String  STARTPOINT_BUTTON = " Choose Start Point "; // reset button string
 	private static final String  DESTINATION_BUTTON = " Choose Destination "; // reset button string
 	private static final String	STARTPOINT_IMAGE = "http://www.tactranconnect.com/images/icon_start.png"; // url for start image
-	private static final String	STOP_IMAGE = "http://www.tactranconnect.com/images/mapicons/marker_incidents.png"; // TODO implement multiple stops
+	//private static final String STOP_IMAGE = "http://www.tactranconnect.com/images/mapicons/marker_incidents.png"; // TODO implement multiple stops
 	private static final String	DESTINATION_IMAGE = "http://www.tactranconnect.com/images/icon_end.png"; // url for destination image
 	private EdgeWeightedGraph graph;
 	private static double[] esriCoordsArray;
@@ -125,9 +113,9 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
     
 		// envelope for ocean
 		map.setExtent(new Envelope(-16732452, 4533753, -16719762, 4619957.78));
-		routeLayer = new GraphicsLayer();
 		
 		// adds graphic layers to the map
+		routeLayer = new GraphicsLayer();
 		map.getLayers().add(routeLayer);
 		streetsLayer = new GraphicsLayer();
 		map.getLayers().add(streetsLayer);
@@ -420,7 +408,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	  	displayRoute(edgeArray);
 	}
   
-	private boolean leftTurnChecker(Edge[] shortestPath){ // TODO check for previous edge compared to current to determine which type of turn it is, check other turns to determine if straight or what options are	
+	private boolean leftTurnChecker(Edge[] shortestPath){ // TODO NOTE WORKS BEST IN CITIES, OTHERWISE WE'LL HAVE TO ACCOUNT FOR OTHER FACTORS IF NOT IN CITIES LIKE HIGHWAY'S ETC. TODO set to return a boolean
 		for (int i = 1; i < shortestPath.length; i++) {
 			Edge firstEdge = shortestPath[i - 1];
 			Edge secondEdge = shortestPath[i];
@@ -441,13 +429,119 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 			double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
 			double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
 			
-			double firstEdgeAngle = Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX));
-			double secondEdgeAngle = Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX));
+			double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+			double secondEdgeAngle = -Math.toDegrees(Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX)));
+				
+			if (firstEdgeAngle < 0) {
+				firstEdgeAngle += 360;
+			}
 			
-			System.out.println(Math.toDegrees(firstEdgeAngle)); // TODO angles are reversed quad 1 = -90 > 0 : 2 = -90 > 180 : 3 = 180 > 90 : 4 = 90 > 0
-			System.out.println(Math.toDegrees(secondEdgeAngle));
-		}
-		
+			if (secondEdgeAngle < 0) {
+				secondEdgeAngle += 360;
+			}
+			
+			if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
+				if ((secondEdgeAngle > firstEdgeAngle) && (secondEdgeAngle < (firstEdgeAngle + 180))) { // if left
+					Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+					int checkEitherCounter = 1;
+					int intersectionID = -1;
+					double[] tempAdjIntersection;
+					double tempAdjAngle; 
+					
+					for (Edge adjEdge : intersectionAdjList) {
+						if (checkEitherCounter == 2) {
+							intersectionID = adjEdge.either();
+						}
+						
+						if (intersectionID == adjEdge.either()) {
+							
+							tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+							double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+							double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+							tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+							
+							if (tempAdjAngle < 0) {
+								tempAdjAngle += 360;
+							}
+							
+							if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
+								System.out.println("Left 1/2");
+								//return (true);
+							}							
+						}
+						checkEitherCounter++;
+					}
+				}
+			}
+			
+			else { // third & forth quad
+				if ((secondEdgeAngle > firstEdgeAngle) || ((secondEdgeAngle > 0) && (secondEdgeAngle < (firstEdgeAngle - 180)))) { // if left
+					if (secondEdgeAngle > firstEdgeAngle) { // if second edge angle is between first and 360
+						Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+						int checkEitherCounter = 1;
+						int intersectionID = -1;
+						double[] tempAdjIntersection;
+						double tempAdjAngle; 
+						
+						for (Edge adjEdge : intersectionAdjList) {
+							if (checkEitherCounter == 2) {
+								intersectionID = adjEdge.either();
+							}
+							
+							if (intersectionID == adjEdge.either()) {
+								
+								tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+								double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+								double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+								tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+								
+								if (tempAdjAngle < 0) {
+									tempAdjAngle += 360;
+								}
+								
+								if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
+									System.out.println("Left 3/4");
+									//return (true);
+								}							
+							}
+							checkEitherCounter++;
+						}
+					}
+					
+					else if (secondEdgeAngle < firstEdgeAngle) { // if second edge angle is between first and 0
+						Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+						int checkEitherCounter = 1;
+						int intersectionID = -1;
+						double[] tempAdjIntersection;
+						double tempAdjAngle; 
+						
+						for (Edge adjEdge : intersectionAdjList) {
+							if (checkEitherCounter == 2) {
+								intersectionID = adjEdge.either();
+							}
+							
+							if (intersectionID == adjEdge.either()) {
+								
+								tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+								double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+								double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+								tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+								
+								if (tempAdjAngle < 0) {
+									tempAdjAngle += 360;
+								}
+								
+								if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
+									System.out.println("Left 3/4 pt. 2");
+									//return (true);
+								}							
+							}
+							checkEitherCounter++;
+						}
+					}
+				}
+			}
+		}		
 		return false;
 	}
 	
