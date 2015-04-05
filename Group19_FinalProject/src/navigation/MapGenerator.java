@@ -15,6 +15,8 @@ import graph.DijkstraSP;
 import graph.Edge;
 import graph.EdgeWeightedGraph;
 
+
+
 // standard java imports
 import java.awt.Color;
 import java.awt.Component;
@@ -32,12 +34,18 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
+
+
 // swing imports
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
+
+
+
+import org.jfree.util.ArrayUtilities;
 
 // arcGIS imports
 import com.esri.toolkit.overlays.DrawingCompleteEvent;
@@ -402,13 +410,104 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
         	Collections.reverse(Arrays.asList(edgeArray));
 		}
 		
-		leftTurnChecker(edgeArray);
+		Edge[] newEdgeArray = leftTurnChecker(edgeArray);
 		
 	  	pathLengthCounter = 0;
-	  	displayRoute(edgeArray);
+	  	displayRoute(newEdgeArray);
 	}
+	
+	private Edge[] threeRightTurns(Iterable<Edge> intersectionAdjList,Edge firstEdge){
+		int listChecker = 1;
+		int firstEdgeV = firstEdge.either();
+		int firstEdgeW = firstEdge.other(firstEdge.either());
+		double[] firstIntersection = intersectionTree.search(firstEdgeV);
+		double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+		double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
+		double[] middleIntersection = intersectionTree.search(firstEdgeW);
+		double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+		double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
+		double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+		Edge[] edges = new Edge[3];
+		if (firstEdgeAngle < 0) {
+			firstEdgeAngle += 360;
+		}
+		for (Edge adjEdge : intersectionAdjList) {
+			if(firstEdgeW ==adjEdge.either()){
+				int tempEdgeW = adjEdge.getW();
+				double[] tempIntersection = intersectionTree.search(tempEdgeW);
+				double tempIntersectionX = ((tempIntersection[0] + 150.528512) / 0.000054142);
+				double tempIntersectionY = ((tempIntersection[1] - 38.247154) / (-0.0000561075));
+				double secondEdgeAngle = -Math.toDegrees(Math.atan2((tempIntersectionY - middleIntersectionY), (tempIntersectionX - middleIntersectionX)));
+				
+				if (secondEdgeAngle < 0 ) {
+					secondEdgeAngle += 360;
+				}
+				if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=10){
+					System.out.println("Straight");
+					edges[0] = rightTurnChecker(adjEdge);
+					edges[1] = rightTurnChecker(edges[0]);
+					edges[2] = rightTurnChecker(edges[1]);
+				}
+			}
+			listChecker++;
+		}
+		return edges;
+	}
+	
+	private Edge rightTurnChecker(Edge firstEdge){
+		if(firstEdge != null){
+			int listChecker = 1;
+			int firstEdgeV = firstEdge.either();
+			int firstEdgeW = firstEdge.other(firstEdge.either());
+			double[] firstIntersection = intersectionTree.search(firstEdgeV);
+			double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+			double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
+			double[] middleIntersection = intersectionTree.search(firstEdgeW);
+			double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+			double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
+			double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+			Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+			
+			if (firstEdgeAngle < 0) {
+				firstEdgeAngle += 360;
+			}
+			for (Edge adjEdge : intersectionAdjList) {
+				if(firstEdgeW ==adjEdge.either()){
+					int tempEdgeW = adjEdge.getW();
+					double[] tempIntersection = intersectionTree.search(tempEdgeW);
+					double tempIntersectionX = ((tempIntersection[0] + 150.528512) / 0.000054142);
+					double tempIntersectionY = ((tempIntersection[1] - 38.247154) / (-0.0000561075));
+					double secondEdgeAngle = -Math.toDegrees(Math.atan2((tempIntersectionY - middleIntersectionY), (tempIntersectionX - middleIntersectionX)));
+					
+					if (secondEdgeAngle < 0 ) {
+						secondEdgeAngle += 360;
+					}
+					if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=135 && Math.abs((secondEdgeAngle-firstEdgeAngle))>=45){
+						if((secondEdgeAngle-firstEdgeAngle) > 0){
+							System.out.println("Right");
+							return(adjEdge);
+						}
+					}
+				}
+				listChecker++;
+			}
+		}
+		
+		return null;
+		
+	}
+	
+	public Edge[] concat(Edge[] a, Edge[] b) {
+		   int aLen = a.length;
+		   int bLen = b.length;
+		   Edge[] c= new Edge[aLen+bLen];
+		   System.arraycopy(a, 0, c, 0, aLen);
+		   System.arraycopy(b, 0, c, aLen, bLen);
+		   return c;
+		}
   
-	private boolean leftTurnChecker(Edge[] shortestPath){ // TODO NOTE WORKS BEST IN CITIES, OTHERWISE WE'LL HAVE TO ACCOUNT FOR OTHER FACTORS IF NOT IN CITIES LIKE HIGHWAY'S ETC. TODO set to return a boolean
+	private Edge[] leftTurnChecker(Edge[] shortestPath){ // TODO NOTE WORKS BEST IN CITIES, OTHERWISE WE'LL HAVE TO ACCOUNT FOR OTHER FACTORS IF NOT IN CITIES LIKE HIGHWAY'S ETC. TODO set to return a boolean
+		Edge[] combinedArray = {};
 		for (int i = 1; i < shortestPath.length; i++) {
 			Edge firstEdge = shortestPath[i - 1];
 			Edge secondEdge = shortestPath[i];
@@ -466,6 +565,8 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 							
 							if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
 								System.out.println("Left 1/2");
+								Edge[] threeReightTurns = threeRightTurns(intersectionAdjList,firstEdge);
+								combinedArray = concat(combinedArray,threeReightTurns);
 								//return (true);
 							}							
 						}
@@ -501,6 +602,8 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 								
 								if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
 									System.out.println("Left 3/4");
+									Edge[] threeReightTurns = threeRightTurns(intersectionAdjList,firstEdge);
+									combinedArray = concat(combinedArray,threeReightTurns);
 									//return (true);
 								}							
 							}
@@ -533,6 +636,8 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 								
 								if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
 									System.out.println("Left 3/4 pt. 2");
+									Edge[] threeReightTurns = threeRightTurns(intersectionAdjList,firstEdge);
+									combinedArray = concat(combinedArray,threeReightTurns);
 									//return (true);
 								}							
 							}
@@ -542,7 +647,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 				}
 			}
 		}		
-		return false;
+		return concat(shortestPath,combinedArray);
 	}
 	
 	// converts an input latitude longitude to ESRI meters to display on the map properly
