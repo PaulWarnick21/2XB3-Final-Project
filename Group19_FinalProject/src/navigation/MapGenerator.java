@@ -470,9 +470,14 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 				if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=10){
 					//System.out.println("Straight");
 					edges[0] = adjEdge;
+					System.out.println("edges[0]"+edges[0]);
 					edges[1] = rightTurnChecker(adjEdge);
+					System.out.println("edges[1]"+edges[1]);
 					edges[2] = rightTurnChecker(edges[1]);
-					edges[3] = rightTurnChecker(edges[2]);
+					System.out.println("edges[2]"+edges[2]);
+					Edge three = new Edge(adjEdge.getW(),edges[2].getW(),edges[1].weight());
+					edges[3] = three;
+					System.out.println("edges[3]"+edges[3]);
 				}
 			}
 			listChecker++;
@@ -509,11 +514,11 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 					if (secondEdgeAngle < 0 ) {
 						secondEdgeAngle += 360;
 					}
-					if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=135 && Math.abs((secondEdgeAngle-firstEdgeAngle))>=45){
-						if((secondEdgeAngle-firstEdgeAngle) > 0){
+					//if((secondEdgeAngle>firstEdgeAngle) && (secondEdgeAngle<(firstEdgeAngle+180))){
+					if(Math.abs((secondEdgeAngle-secondEdgeAngle))<=135 && Math.abs((secondEdgeAngle-firstEdgeW))>=30){
 							System.out.println("Right");
+							System.out.println("first angle " + firstEdgeAngle + "second angle " + secondEdgeAngle);
 							return(adjEdge);
-						}
 					}
 				}
 				listChecker++;
