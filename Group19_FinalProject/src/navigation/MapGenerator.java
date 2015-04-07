@@ -471,7 +471,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 				if (secondEdgeAngle < 0 ) {
 					secondEdgeAngle += 360;
 				}
-				if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=10){
+				if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=20){
 					//System.out.println("Straight");
 					edges[0] = adjEdge;
 					//System.out.println("edges[0]"+edges[0]);
