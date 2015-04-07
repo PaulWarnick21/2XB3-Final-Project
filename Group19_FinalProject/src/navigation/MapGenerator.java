@@ -351,17 +351,21 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	// adds the optimal route to the map 
 	private void displayRoute(Edge[] route, boolean isLoop) {
 		if (isLoop == true) {
-			Polyline routeStreet = new Polyline();
-			SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.BLUE, 6.0f);
-			double[] latLongArrayStartPointRoute = convertToEsriMeters((intersectionTree.search(route[0].either())[0]), (intersectionTree.search(route[0].either())[1])); 
-			double[] latLongArrayEndPointRoute; 
-			routeStreet.startPath(latLongArrayStartPointRoute[0], latLongArrayStartPointRoute[1]);
-			
-			for (int i = 0; i < route.length; i++) {
-				latLongArrayEndPointRoute = convertToEsriMeters((intersectionTree.search(route[i].other(route[i].either()))[0]), (intersectionTree.search(route[i].other(route[i].either()))[1]));
-				routeStreet.lineTo(latLongArrayEndPointRoute[0], latLongArrayEndPointRoute[1]);
+			if(route[0]!=null){
+				Polyline routeStreet = new Polyline();
+				SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.BLUE, 6.0f);
+				double[] latLongArrayStartPointRoute = convertToEsriMeters((intersectionTree.search(route[0].either())[0]), (intersectionTree.search(route[0].either())[1])); 
+				double[] latLongArrayEndPointRoute; 
+				routeStreet.startPath(latLongArrayStartPointRoute[0], latLongArrayStartPointRoute[1]);
+				
+				for (int i = 0; i < route.length; i++) {
+					if(route[i]!=null){
+						latLongArrayEndPointRoute = convertToEsriMeters((intersectionTree.search(route[i].other(route[i].either()))[0]), (intersectionTree.search(route[i].other(route[i].either()))[1]));
+						routeStreet.lineTo(latLongArrayEndPointRoute[0], latLongArrayEndPointRoute[1]);
+					}
+				}
+				routeLayer.addGraphic(new Graphic(routeStreet, routeSymbol, 0));
 			}
-			routeLayer.addGraphic(new Graphic(routeStreet, routeSymbol, 0));
 		}
 		
 		else {
@@ -477,6 +481,12 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 					//System.out.println("edges[2]"+edges[2]);
 					edges[3] = rightTurnChecker(edges[2]);
 					//System.out.println("edges[3]"+edges[3]);
+					if(edges[3]== null || edges[3].getW()!=firstEdge.getW()){
+						edges[0]=null;
+						edges[1]=null;
+						edges[2]=null;
+						edges[3]=null;
+					}
 				}
 			}
 			listChecker++;
@@ -485,68 +495,71 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	}
 	
 	private Edge rightTurnChecker(Edge firstEdge){
-		int firstEdgeV = firstEdge.either();
-		int firstEdgeW = firstEdge.other(firstEdge.either());
-		
-		double[] firstIntersection = intersectionTree.search(firstEdgeV);
-		double[] middleIntersection = intersectionTree.search(firstEdgeW);
-		
-		double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
-		double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
-		
-		double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
-		double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
-		
-		Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
-		int checkEitherCounter = 1;
-		int intersectionID = -1;
-		double[] tempAdjIntersection;
-		double tempAdjAngle; 
-		
-		double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
-		
-		if (firstEdgeAngle < 0) {
-			firstEdgeAngle += 360;
-		}
-		
-		for (Edge adjEdge : intersectionAdjList) {
-			if (checkEitherCounter == 2) {
-				intersectionID = adjEdge.either();
+		if(firstEdge!=null){
+			int firstEdgeV = firstEdge.either();
+			int firstEdgeW = firstEdge.other(firstEdge.either());
+			
+			double[] firstIntersection = intersectionTree.search(firstEdgeV);
+			double[] middleIntersection = intersectionTree.search(firstEdgeW);
+			
+			double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+			double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
+			
+			double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+			double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
+			
+			Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+			int checkEitherCounter = 1;
+			int intersectionID = -1;
+			double[] tempAdjIntersection;
+			double tempAdjAngle; 
+			
+			double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+			
+			if (firstEdgeAngle < 0) {
+				firstEdgeAngle += 360;
 			}
 			
-			if (intersectionID == adjEdge.either()) {
-				
-				tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
-				double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
-				double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
-				tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
-				
-				if (tempAdjAngle < 0) {
-					tempAdjAngle += 360;
+			for (Edge adjEdge : intersectionAdjList) {
+				if (checkEitherCounter == 2) {
+					intersectionID = adjEdge.either();
 				}
 				
-				if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
-					if ((firstEdgeAngle < 10) && (tempAdjAngle > (firstEdgeAngle + 190)) && (tempAdjAngle <= 350)){
-						return(adjEdge);
+				if (intersectionID == adjEdge.either()) {
+					
+					tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+					double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+					double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+					tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+					
+					if (tempAdjAngle < 0) {
+						tempAdjAngle += 360;
 					}
 					
-					else if ((tempAdjAngle > (firstEdgeAngle + 180)) && (tempAdjAngle <= 360)) { // if left
-						return(adjEdge);
-					}
+					if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
+						if ((firstEdgeAngle < 10) && (tempAdjAngle > (firstEdgeAngle + 190)) && (tempAdjAngle <= 350)){
+							return(adjEdge);
+						}
+						
+						else if ((tempAdjAngle > (firstEdgeAngle + 180)) && (tempAdjAngle <= 360)) { // if left
+							return(adjEdge);
+						}
+						
+						else if ((tempAdjAngle < (firstEdgeAngle - 10)) && (tempAdjAngle >= 0)) {
+							return(adjEdge);
+						}
+					}	
 					
-					else if ((tempAdjAngle < (firstEdgeAngle - 10)) && (tempAdjAngle >= 0)) {
-						return(adjEdge);
-					}
-				}	
-				
-				else { // third & forth quad
-					if ((tempAdjAngle < (firstEdgeAngle - 10)) && (tempAdjAngle > (firstEdgeAngle - 170))) {
-						return(adjEdge);
+					else { // third & forth quad
+						if ((tempAdjAngle < (firstEdgeAngle - 10)) && (tempAdjAngle > (firstEdgeAngle - 170))) {
+							return(adjEdge);
+						}
 					}
 				}
+				checkEitherCounter++;
 			}
-			checkEitherCounter++;
 		}
+		
 		
 		return(null); // TODO return something else if no right turns are found (6.1 OPTIMIZED ROUTE)
 	}
