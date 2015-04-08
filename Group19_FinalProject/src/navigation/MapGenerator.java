@@ -473,29 +473,30 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 			Edge[] edgeArray = {};
 			shortestPathTree = new DijkstraSP(g, stopArray[i]);
 			
-			if (shortestPathTree.hasPathTo(stopArray[i + 1])) {
+			if (shortestPathTree.hasPathTo(stopArray[i + 1])) {				
 				for (Edge currentEdge : shortestPathTree.pathTo(stopArray[i + 1])) {
-					pathLengthCounter++;
-	      		
+					pathLengthCounter++;	      		
 				}
 				
-			   	edgeArray = new Edge[pathLengthCounter];
-	        	int setCurrentEdgeCounter = 0;
-	        	
-	        	for (Edge currentEdge : shortestPathTree.pathTo(stopArray[i + 1])) {
-	            	edgeArray[setCurrentEdgeCounter] = currentEdge;
-	            	setCurrentEdgeCounter++;
-	        	}
-	        	
-	        	Collections.reverse(Arrays.asList(edgeArray));
-			}
-					
-		  	pathLengthCounter = 0;
-		  	displayRoute(edgeArray, false);
-		  	shortestPath[i] = new Edge[edgeArray.length];
-		  	for (int j = 0; j < edgeArray.length; j++) {
-		  		shortestPath[i][j] = edgeArray[j];
-		  	}
+				if (pathLengthCounter != 0) {				
+				   	edgeArray = new Edge[pathLengthCounter];
+		        	int setCurrentEdgeCounter = 0;
+		        	
+		        	for (Edge currentEdge : shortestPathTree.pathTo(stopArray[i + 1])) {
+		            	edgeArray[setCurrentEdgeCounter] = currentEdge;
+		            	setCurrentEdgeCounter++;
+		        	}
+		        	
+		        	Collections.reverse(Arrays.asList(edgeArray));
+		        	
+		        	pathLengthCounter = 0;
+				  	displayRoute(edgeArray, false);
+				  	shortestPath[i] = new Edge[edgeArray.length];
+				  	for (int j = 0; j < edgeArray.length; j++) {
+				  		shortestPath[i][j] = edgeArray[j];
+				  	}
+				}
+			}			  	
 		}
 	}
 	
@@ -615,75 +616,40 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	
 	private void leftTurnChecker() {
 		for (int j = 0; j < shortestPath.length; j++) {
-			for (int i = 1; i < shortestPath[j].length; i++) {
-				Edge firstEdge = shortestPath[j][i - 1];
-				Edge secondEdge = shortestPath[j][i];
-				int firstEdgeV = firstEdge.either();
-				int firstEdgeW = firstEdge.other(firstEdge.either());
-				int secondEdgeV = secondEdge.other(secondEdge.either());
-				
-				double[] firstIntersection = intersectionTree.search(firstEdgeV);
-				double[] middleIntersection = intersectionTree.search(firstEdgeW);
-				double[] lastIntersection = intersectionTree.search(secondEdgeV);
-				
-				double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
-				double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
-				
-				double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
-				double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
-				
-				double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
-				double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
-				
-				double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
-				double secondEdgeAngle = -Math.toDegrees(Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX)));
+			if (shortestPath[j] != null) {
+				for (int i = 1; i < shortestPath[j].length; i++) {
+					Edge firstEdge = shortestPath[j][i - 1];
+					Edge secondEdge = shortestPath[j][i];
+					int firstEdgeV = firstEdge.either();
+					int firstEdgeW = firstEdge.other(firstEdge.either());
+					int secondEdgeV = secondEdge.other(secondEdge.either());
 					
-				if (firstEdgeAngle < 0) {
-					firstEdgeAngle += 360;
-				}
-				
-				if (secondEdgeAngle < 0) {
-					secondEdgeAngle += 360;
-				}
-				
-				if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
-					if ((secondEdgeAngle > firstEdgeAngle) && (secondEdgeAngle < (firstEdgeAngle + 180))) { // if left
-						Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
-						int checkEitherCounter = 1;
-						int intersectionID = -1;
-						double[] tempAdjIntersection;
-						double tempAdjAngle; 
+					double[] firstIntersection = intersectionTree.search(firstEdgeV);
+					double[] middleIntersection = intersectionTree.search(firstEdgeW);
+					double[] lastIntersection = intersectionTree.search(secondEdgeV);
+					
+					double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+					double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
+					
+					double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+					double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
+					
+					double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
+					double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
+					
+					double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+					double secondEdgeAngle = -Math.toDegrees(Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX)));
 						
-						for (Edge adjEdge : intersectionAdjList) {
-							if (checkEitherCounter == 2) {
-								intersectionID = adjEdge.either();
-							}
-							
-							if (intersectionID == adjEdge.either()) {
-								
-								tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
-								double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
-								double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
-								tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
-								
-								if (tempAdjAngle < 0) {
-									tempAdjAngle += 360;
-								}
-								
-								if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) {
-									//System.out.println("Left 1/2");
-									Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
-									displayRoute(threeRightTurns, true);
-								}							
-							}
-							checkEitherCounter++;
-						}
+					if (firstEdgeAngle < 0) {
+						firstEdgeAngle += 360;
 					}
-				}
-				
-				else { // third & forth quad
-					if ((secondEdgeAngle > firstEdgeAngle) || ((secondEdgeAngle > 0) && (secondEdgeAngle < (firstEdgeAngle - 180)))) { // if left
-						if (secondEdgeAngle > firstEdgeAngle) { // if second edge angle is between first and 360
+					
+					if (secondEdgeAngle < 0) {
+						secondEdgeAngle += 360;
+					}
+					
+					if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
+						if ((secondEdgeAngle > firstEdgeAngle) && (secondEdgeAngle < (firstEdgeAngle + 180))) { // if left
 							Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
 							int checkEitherCounter = 1;
 							int intersectionID = -1;
@@ -707,6 +673,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 									}
 									
 									if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) {
+										//System.out.println("Left 1/2");
 										Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
 										displayRoute(threeRightTurns, true);
 									}							
@@ -714,41 +681,77 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 								checkEitherCounter++;
 							}
 						}
-						
-						else if (secondEdgeAngle < firstEdgeAngle) { // if second edge angle is between first and 0
-							Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
-							int checkEitherCounter = 1;
-							int intersectionID = -1;
-							double[] tempAdjIntersection;
-							double tempAdjAngle; 
-							
-							for (Edge adjEdge : intersectionAdjList) {
-								if (checkEitherCounter == 2) {
-									intersectionID = adjEdge.either();
-								}
+					}
+					
+					else { // third & forth quad
+						if ((secondEdgeAngle > firstEdgeAngle) || ((secondEdgeAngle > 0) && (secondEdgeAngle < (firstEdgeAngle - 180)))) { // if left
+							if (secondEdgeAngle > firstEdgeAngle) { // if second edge angle is between first and 360
+								Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+								int checkEitherCounter = 1;
+								int intersectionID = -1;
+								double[] tempAdjIntersection;
+								double tempAdjAngle; 
 								
-								if (intersectionID == adjEdge.either()) {
-									
-									tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
-									double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
-									double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
-									tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
-									
-									if (tempAdjAngle < 0) {
-										tempAdjAngle += 360;
+								for (Edge adjEdge : intersectionAdjList) {
+									if (checkEitherCounter == 2) {
+										intersectionID = adjEdge.either();
 									}
 									
-									if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { 
-										Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
-										displayRoute(threeRightTurns, true);
+									if (intersectionID == adjEdge.either()) {
+										
+										tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+										double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+										double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+										tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+										
+										if (tempAdjAngle < 0) {
+											tempAdjAngle += 360;
+										}
+										
+										if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) {
+											Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
+											displayRoute(threeRightTurns, true);
+										}							
 									}
+									checkEitherCounter++;
 								}
-								checkEitherCounter++;
+							}
+							
+							else if (secondEdgeAngle < firstEdgeAngle) { // if second edge angle is between first and 0
+								Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+								int checkEitherCounter = 1;
+								int intersectionID = -1;
+								double[] tempAdjIntersection;
+								double tempAdjAngle; 
+								
+								for (Edge adjEdge : intersectionAdjList) {
+									if (checkEitherCounter == 2) {
+										intersectionID = adjEdge.either();
+									}
+									
+									if (intersectionID == adjEdge.either()) {
+										
+										tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+										double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+										double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+										tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+										
+										if (tempAdjAngle < 0) {
+											tempAdjAngle += 360;
+										}
+										
+										if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { 
+											Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
+											displayRoute(threeRightTurns, true);
+										}
+									}
+									checkEitherCounter++;
+								}
 							}
 						}
 					}
-				}
-			}		
+				}	
+			}
 		}
 	}
 	
