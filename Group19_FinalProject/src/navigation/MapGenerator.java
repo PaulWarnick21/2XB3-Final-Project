@@ -15,10 +15,6 @@ import graph.DijkstraSP;
 import graph.Edge;
 import graph.EdgeWeightedGraph;
 
-
-
-
-
 // standard java imports
 import java.awt.Color;
 import java.awt.Component;
@@ -36,24 +32,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
-
-
-
-
 // swing imports
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
-
-
-
-
-
-import org.jfree.util.ArrayUtilities;
-
-
 
 // arcGIS imports
 import com.esri.toolkit.overlays.DrawingCompleteEvent;
@@ -81,31 +65,35 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 	private GraphicsLayer streetsLayer;
 	private GraphicsLayer routeLayer;
 	private NAFeaturesAsFeature stops = new NAFeaturesAsFeature();
-	private JButton destinationButton;
 	private JButton startPointButton;
+	private JButton stopButton;
+	private JButton destinationButton;
 	private JButton solveRouteButton;
   
-	private int stopCounter = 2;
+	private int stopCounter = 0;
 	private double[] latLongArrayStartPoint;
 	private double[] latLongArrayEndPoint;
-	double[][] xyCoordinates;
+	private double[][] xyCoordinates;
 	private static final String SOLVE_BUTTON = " Solve route "; // solve button string 
 	private static final String RESET_BUTTON = " Reset "; // reset button string
-	private static final String  STARTPOINT_BUTTON = " Choose Start Point "; // reset button string
-	private static final String  DESTINATION_BUTTON = " Choose Destination "; // reset button string
+	private static final String  STARTPOINT_BUTTON = " Choose Start Point ";
+	private static final String  STOP_BUTTON = " Add a Stop ";
+	private static final String  DESTINATION_BUTTON = " Choose Destination ";
 	private static final String	STARTPOINT_IMAGE = "http://www.tactranconnect.com/images/icon_start.png"; // url for start image
-	//private static final String STOP_IMAGE = "http://www.tactranconnect.com/images/mapicons/marker_incidents.png"; // TODO implement multiple stops
+	private static final String STOP_IMAGE = "http://www.tactranconnect.com/images/mapicons/marker_incidents.png"; // url for stop image
 	private static final String	DESTINATION_IMAGE = "http://www.tactranconnect.com/images/icon_end.png"; // url for destination image
 	private EdgeWeightedGraph graph;
 	private static double[] esriCoordsArray;
 	private static double[][] esriIntersectionCoordinates;
 	private DijkstraSP shortestPathTree;
 	private IntersectionsBST intersectionTree;
-	private int startPoint;
-	private int endPoint;  
+	private int[] stopArray = new int[1];
 	private PictureMarkerSymbol startSymbol = new PictureMarkerSymbol(STARTPOINT_IMAGE); // creates a symbol with the start point url
+	private PictureMarkerSymbol stopSymbol = new PictureMarkerSymbol(STOP_IMAGE); // creates a symbol with the start point url
 	private PictureMarkerSymbol destinationSymbol = new PictureMarkerSymbol(DESTINATION_IMAGE); // same for destination
-	private Edge[] shortestPath;
+	private Edge[][] shortestPath;
+	private boolean stopHasBeenClicked = false;
+	private boolean destinationHasBeenClicked = false;
   
 	// generates the map
 	public MapGenerator() throws IOException {
@@ -234,7 +222,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 		
 			// adds a street graphic to the street layer of the map
 			Polyline street = new Polyline();
-			SimpleLineSymbol streetSymbol = new SimpleLineSymbol(Color.RED, 2.0f);
+			SimpleLineSymbol streetSymbol = new SimpleLineSymbol(Color.BLUE, 2.0f);
 			latLongArrayStartPoint = convertToEsriMeters(xCoordStartPoint, yCoordStartPoint);
 			street.startPath(latLongArrayStartPoint[0],latLongArrayStartPoint[1]);
 			latLongArrayEndPoint = convertToEsriMeters(xCoordEndPoint, yCoordEndPoint);
@@ -263,7 +251,9 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 					// features for adding stop graphic and enabling certain buttons
 					startPointButton.setEnabled(false);
 					stopsLayer.addGraphic(graphic);
+					stopButton.setEnabled(true);
 					destinationButton.setEnabled(true);
+					stopCounter++;
 				
 					// finds the the closest intersection (vertex) on the map for navigation purposes
 					String[] startPointLatInfo = (graphic.getGeometry().toString().split(","));
@@ -276,11 +266,16 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 					// checks if the start point location is out of bounds
 					if ((getClosestIntersection(startPointLatEsri, startPointLongEsri)[0]) == -1.0 || getClosestIntersection(startPointLatEsri, startPointLongEsri)[1] == -1.0) {
 						startPointButton.setEnabled(true);
+						stopButton.setEnabled(false);
 						destinationButton.setEnabled(false);
 						solveRouteButton.setEnabled(false);
 						myDrawingOverlay.setEnabled(true);
+						stopArray = new int[1];
+						stopHasBeenClicked = false;
+						destinationHasBeenClicked = false;
+						
 						// reset graphic layers, stop features and global variables
-						stopCounter = 2;
+						stopCounter = 0;
 						routeLayer.removeAll();
 						stopsLayer.removeAll();
 						stops.clearFeatures();
@@ -296,14 +291,13 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 						double startClosestNodeLat = getClosestIntersection(startPointLatEsri, startPointLongEsri)[0];
 						double startClosestNodeLong = getClosestIntersection(startPointLatEsri, startPointLongEsri)[1];
 						intersectionTree.findNodeID(intersectionTree.root, startClosestNodeLat, startClosestNodeLong);
-						startPoint = intersectionTree.closestNode;
+						stopArray[0] = intersectionTree.closestNode;
 					}
 				}
-			
+				
 				// adds the destination graphic to the stop layer upon mouse click
-				else if (!destinationButton.isEnabled() && stopCounter == 2) {
+				else if (!destinationButton.isEnabled() && stopCounter == 1) {
 					// modifies which buttons are enabled and adds the destination graphic
-					destinationButton.setEnabled(false);
 					stopsLayer.addGraphic(graphic);
 					solveRouteButton.setEnabled(true);
 					stopCounter++;
@@ -322,9 +316,12 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 						destinationButton.setEnabled(false);
 						solveRouteButton.setEnabled(false);
 						myDrawingOverlay.setEnabled(true);
+						stopArray = new int[1];
+						stopHasBeenClicked = false;
+						destinationHasBeenClicked = false;
 						
 						// reset graphic layers, stop features and global variables
-						stopCounter = 2;
+						stopCounter = 0;
 						routeLayer.removeAll();
 						stopsLayer.removeAll();
 						stops.clearFeatures();
@@ -340,20 +337,73 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 						double destinationClosestNodeLat = getClosestIntersection(destinationLatEsri, destinationLongEsri)[0];
 						double destinationClosestNodeLong = getClosestIntersection(destinationLatEsri, destinationLongEsri)[1];
 						intersectionTree.findNodeID(intersectionTree.root, destinationClosestNodeLat, destinationClosestNodeLong);
-						endPoint = intersectionTree.closestNode;
+						int[] closestNode = {intersectionTree.closestNode};
+						addToStops(stopArray, closestNode);
+					}
+				}
+				
+				else if (stopButton.isEnabled() && stopHasBeenClicked && !destinationHasBeenClicked) { 
+					// modifies which buttons are enabled and adds the stop graphic
+					stopsLayer.addGraphic(graphic);
+					
+					// finds the closest intersection (vertex) on the map for navigation purposes
+					String[] stopLatInfo = (graphic.getGeometry().toString().split(","));
+					String[] stopLongInfo = stopLatInfo[0].split("-");
+					double stopLatEsri = Double.parseDouble(stopLongInfo[1]);
+					stopLatInfo[1] =  stopLatInfo[1].replace(' ', ']');
+					stopLatInfo[1] =  stopLatInfo[1].replace("]", "");
+					double stopLongEsri = Double.parseDouble( stopLatInfo[1]);
+				
+					// checks if the stop location is out of bounds
+					if ((getClosestIntersection(stopLatEsri, stopLongEsri)[0]) == -1.0 || getClosestIntersection(stopLatEsri, stopLongEsri)[1] == -1.0) {
+						startPointButton.setEnabled(true);
+						stopButton.setEnabled(false);
+						solveRouteButton.setEnabled(false);
+						myDrawingOverlay.setEnabled(true);
+						stopArray = new int[1];
+						stopHasBeenClicked = false;
+						destinationHasBeenClicked = false;
+						
+						// reset graphic layers, stop features and global variables
+						stopCounter = 0;
+						routeLayer.removeAll();
+						stopsLayer.removeAll();
+						stops.clearFeatures();
+						HashMap<String, Object> attributes = new HashMap<String, Object>();
+						attributes.put("type", "Start");
+						myDrawingOverlay.setUp(
+								DrawingMode.POINT,
+								new SimpleMarkerSymbol(Color.GRAY, 0, Style.X),
+								attributes);
+					}
+				
+					else {
+						double stopClosestNodeLat = getClosestIntersection(stopLatEsri, stopLongEsri)[0];
+						double stopClosestNodeLong = getClosestIntersection(stopLatEsri, stopLongEsri)[1];
+						intersectionTree.findNodeID(intersectionTree.root, stopClosestNodeLat, stopClosestNodeLong);
+						int[] closestNode = {intersectionTree.closestNode};
+						addToStops(stopArray, closestNode);
 					}
 				}
 			}
 		});
 		map.addMapOverlay(myDrawingOverlay);
 	}
-		
+	
+	public void addToStops(int[] currentStopArray, int[] toBeAdded) {
+		   int currentStopArrayLength = currentStopArray.length;
+		   int toBeAddedLenth = toBeAdded.length;
+		   stopArray= new int[currentStopArrayLength + toBeAddedLenth];
+		   System.arraycopy(currentStopArray, 0, stopArray, 0, currentStopArrayLength);
+		   System.arraycopy(toBeAdded, 0, stopArray, currentStopArrayLength, toBeAddedLenth);
+		}
+
 	// adds the optimal route to the map 
 	private void displayRoute(Edge[] route, boolean isLoop) {
 		if (isLoop == true) {
 			if(route[0]!=null){
 				Polyline routeStreet = new Polyline();
-				SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.BLUE, 6.0f);
+				SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.GREEN, 6.0f);
 				double[] latLongArrayStartPointRoute = convertToEsriMeters((intersectionTree.search(route[0].either())[0]), (intersectionTree.search(route[0].either())[1])); 
 				double[] latLongArrayEndPointRoute; 
 				routeStreet.startPath(latLongArrayStartPointRoute[0], latLongArrayStartPointRoute[1]);
@@ -370,7 +420,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 		
 		else {
 			Polyline routeStreet = new Polyline();
-			SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.ORANGE, 10.0f);
+			SimpleLineSymbol routeSymbol = new SimpleLineSymbol(Color.RED, 10.0f);
 			double[] latLongArrayStartPointRoute = convertToEsriMeters((intersectionTree.search(route[0].either())[0]), (intersectionTree.search(route[0].either())[1])); 
 			double[] latLongArrayEndPointRoute; 
 			routeStreet.startPath(latLongArrayStartPointRoute[0], latLongArrayStartPointRoute[1]);
@@ -416,32 +466,37 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
   
 	// uses Dijkstra's algorithm to find the optimal route in the graph from user chose start, to destination
 	@SuppressWarnings("unused")
-	private void getRoute(EdgeWeightedGraph g, int start, int destination){
-		int pathLengthCounter = 0;
-		Edge[] edgeArray = {};
-		shortestPathTree = new DijkstraSP(g, start);
-		//System.out.printf("%d to %d (%.2f)  ", start, destination, shortestPathTree.distTo(destination));
-	  
-		if (shortestPathTree.hasPathTo(destination)) {
-			for (Edge currentEdge : shortestPathTree.pathTo(destination)) {
-				pathLengthCounter++;
-      		
-			}
+	private void getRoute(EdgeWeightedGraph g, int[] stopArray){
+		shortestPath = new Edge[stopArray.length - 1][];
+		for (int i = 0; i < stopArray.length - 1; i++) {
+			int pathLengthCounter = 0;
+			Edge[] edgeArray = {};
+			shortestPathTree = new DijkstraSP(g, stopArray[i]);
 			
-		   	edgeArray = new Edge[pathLengthCounter];
-        	int setCurrentEdgeCounter = 0;
-        	
-        	for (Edge currentEdge : shortestPathTree.pathTo(destination)) {
-            	edgeArray[setCurrentEdgeCounter] = currentEdge;
-            	setCurrentEdgeCounter++;
-        	}
-        	
-        	Collections.reverse(Arrays.asList(edgeArray));
-		}
+			if (shortestPathTree.hasPathTo(stopArray[i + 1])) {
+				for (Edge currentEdge : shortestPathTree.pathTo(stopArray[i + 1])) {
+					pathLengthCounter++;
+	      		
+				}
 				
-	  	pathLengthCounter = 0;
-	  	displayRoute(edgeArray, false); // TODO remove false
-	  	shortestPath = edgeArray;
+			   	edgeArray = new Edge[pathLengthCounter];
+	        	int setCurrentEdgeCounter = 0;
+	        	
+	        	for (Edge currentEdge : shortestPathTree.pathTo(stopArray[i + 1])) {
+	            	edgeArray[setCurrentEdgeCounter] = currentEdge;
+	            	setCurrentEdgeCounter++;
+	        	}
+	        	
+	        	Collections.reverse(Arrays.asList(edgeArray));
+			}
+					
+		  	pathLengthCounter = 0;
+		  	displayRoute(edgeArray, false);
+		  	shortestPath[i] = new Edge[edgeArray.length];
+		  	for (int j = 0; j < edgeArray.length; j++) {
+		  		shortestPath[i][j] = edgeArray[j];
+		  	}
+		}
 	}
 	
 	@SuppressWarnings("unused")
@@ -472,15 +527,10 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 					secondEdgeAngle += 360;
 				}
 				if(Math.abs((secondEdgeAngle-firstEdgeAngle))<=20){
-					//System.out.println("Straight");
 					edges[0] = adjEdge;
-					//System.out.println("edges[0]"+edges[0]);
 					edges[1] = rightTurnChecker(adjEdge);
-					//System.out.println("edges[1]"+edges[1]);
 					edges[2] = rightTurnChecker(edges[1]);
-					//System.out.println("edges[2]"+edges[2]);
 					edges[3] = rightTurnChecker(edges[2]);
-					//System.out.println("edges[3]"+edges[3]);
 					if(edges[3]== null || edges[3].getW()!=firstEdge.getW()){
 						edges[0]=null;
 						edges[1]=null;
@@ -558,82 +608,46 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 				}
 				checkEitherCounter++;
 			}
-		}
-		
-		
-		return(null); // TODO return something else if no right turns are found (6.1 OPTIMIZED ROUTE)
+		}		
+		return(null);
 	}
   
-	private void leftTurnChecker() { // TODO NOTE WORKS BEST IN CITIES, OTHERWISE WE'LL HAVE TO ACCOUNT FOR OTHER FACTORS IF NOT IN CITIES LIKE HIGHWAY'S ETC. TODO set to return a boolean
-		for (int i = 1; i < shortestPath.length; i++) {
-			Edge firstEdge = shortestPath[i - 1];
-			Edge secondEdge = shortestPath[i];
-			int firstEdgeV = firstEdge.either();
-			int firstEdgeW = firstEdge.other(firstEdge.either());
-			int secondEdgeV = secondEdge.other(secondEdge.either());
-			
-			double[] firstIntersection = intersectionTree.search(firstEdgeV);
-			double[] middleIntersection = intersectionTree.search(firstEdgeW);
-			double[] lastIntersection = intersectionTree.search(secondEdgeV);
-			
-			double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
-			double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
-			
-			double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
-			double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
-			
-			double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
-			double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
-			
-			double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
-			double secondEdgeAngle = -Math.toDegrees(Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX)));
+	
+	private void leftTurnChecker() {
+		for (int j = 0; j < shortestPath.length; j++) {
+			for (int i = 1; i < shortestPath[j].length; i++) {
+				Edge firstEdge = shortestPath[j][i - 1];
+				Edge secondEdge = shortestPath[j][i];
+				int firstEdgeV = firstEdge.either();
+				int firstEdgeW = firstEdge.other(firstEdge.either());
+				int secondEdgeV = secondEdge.other(secondEdge.either());
 				
-			if (firstEdgeAngle < 0) {
-				firstEdgeAngle += 360;
-			}
-			
-			if (secondEdgeAngle < 0) {
-				secondEdgeAngle += 360;
-			}
-			
-			if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
-				if ((secondEdgeAngle > firstEdgeAngle) && (secondEdgeAngle < (firstEdgeAngle + 180))) { // if left
-					Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
-					int checkEitherCounter = 1;
-					int intersectionID = -1;
-					double[] tempAdjIntersection;
-					double tempAdjAngle; 
+				double[] firstIntersection = intersectionTree.search(firstEdgeV);
+				double[] middleIntersection = intersectionTree.search(firstEdgeW);
+				double[] lastIntersection = intersectionTree.search(secondEdgeV);
+				
+				double firstIntersectionX = ((firstIntersection[0] + 150.528512) / 0.000054142);
+				double firstIntersectionY = ((firstIntersection[1] - 38.247154) / (-0.0000561075));
+				
+				double middleIntersectionX = ((middleIntersection[0] + 150.528512) / 0.000054142);
+				double middleIntersectionY = ((middleIntersection[1] - 38.247154) / (-0.0000561075));
+				
+				double lastIntersectionX = ((lastIntersection[0] + 150.528512) / 0.000054142);
+				double lastIntersectionY = ((lastIntersection[1] - 38.247154) / (-0.0000561075));
+				
+				double firstEdgeAngle = -Math.toDegrees(Math.atan2((middleIntersectionY - firstIntersectionY), (middleIntersectionX - firstIntersectionX)));
+				double secondEdgeAngle = -Math.toDegrees(Math.atan2((lastIntersectionY - middleIntersectionY), (lastIntersectionX - middleIntersectionX)));
 					
-					for (Edge adjEdge : intersectionAdjList) {
-						if (checkEitherCounter == 2) {
-							intersectionID = adjEdge.either();
-						}
-						
-						if (intersectionID == adjEdge.either()) {
-							
-							tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
-							double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
-							double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
-							tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
-							
-							if (tempAdjAngle < 0) {
-								tempAdjAngle += 360;
-							}
-							
-							if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
-								//System.out.println("Left 1/2");
-								Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
-								displayRoute(threeRightTurns, true); // TODO remove false
-							}							
-						}
-						checkEitherCounter++;
-					}
+				if (firstEdgeAngle < 0) {
+					firstEdgeAngle += 360;
 				}
-			}
-			
-			else { // third & forth quad
-				if ((secondEdgeAngle > firstEdgeAngle) || ((secondEdgeAngle > 0) && (secondEdgeAngle < (firstEdgeAngle - 180)))) { // if left
-					if (secondEdgeAngle > firstEdgeAngle) { // if second edge angle is between first and 360
+				
+				if (secondEdgeAngle < 0) {
+					secondEdgeAngle += 360;
+				}
+				
+				if (firstEdgeAngle >= 0 && firstEdgeAngle < 180) { // first & second quad
+					if ((secondEdgeAngle > firstEdgeAngle) && (secondEdgeAngle < (firstEdgeAngle + 180))) { // if left
 						Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
 						int checkEitherCounter = 1;
 						int intersectionID = -1;
@@ -656,56 +670,86 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 									tempAdjAngle += 360;
 								}
 								
-								if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
-									//System.out.println("Left 3/4");
+								if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) {
+									//System.out.println("Left 1/2");
 									Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
-									displayRoute(threeRightTurns, true); // TODO remove false
-									//combinedArray = concat(combinedArray,threeReightTurns);
-									//return (true);
-								}							
-							}
-							checkEitherCounter++;
-						}
-					}
-					
-					else if (secondEdgeAngle < firstEdgeAngle) { // if second edge angle is between first and 0
-						Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
-						int checkEitherCounter = 1;
-						int intersectionID = -1;
-						double[] tempAdjIntersection;
-						double tempAdjAngle; 
-						
-						for (Edge adjEdge : intersectionAdjList) {
-							if (checkEitherCounter == 2) {
-								intersectionID = adjEdge.either();
-							}
-							
-							if (intersectionID == adjEdge.either()) {
-								
-								tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
-								double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
-								double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
-								tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
-								
-								if (tempAdjAngle < 0) {
-									tempAdjAngle += 360;
-								}
-								
-								if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { // TODO determine if we want to display no left turn route in this method OR have this method return where each left turn is then calculate the latter in another method
-									//System.out.println("Left 3/4 pt. 2");
-									Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
-									displayRoute(threeRightTurns, true); // TODO remove false
-									//combinedArray = concat(combinedArray,threeReightTurns);
-									//return (true);
+									displayRoute(threeRightTurns, true);
 								}							
 							}
 							checkEitherCounter++;
 						}
 					}
 				}
-			}
-		}		
-		//return concat(shortestPath,combinedArray); // TODO
+				
+				else { // third & forth quad
+					if ((secondEdgeAngle > firstEdgeAngle) || ((secondEdgeAngle > 0) && (secondEdgeAngle < (firstEdgeAngle - 180)))) { // if left
+						if (secondEdgeAngle > firstEdgeAngle) { // if second edge angle is between first and 360
+							Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+							int checkEitherCounter = 1;
+							int intersectionID = -1;
+							double[] tempAdjIntersection;
+							double tempAdjAngle; 
+							
+							for (Edge adjEdge : intersectionAdjList) {
+								if (checkEitherCounter == 2) {
+									intersectionID = adjEdge.either();
+								}
+								
+								if (intersectionID == adjEdge.either()) {
+									
+									tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+									double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+									double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+									tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+									
+									if (tempAdjAngle < 0) {
+										tempAdjAngle += 360;
+									}
+									
+									if ((tempAdjAngle < secondEdgeAngle) && (tempAdjAngle > (firstEdgeAngle - 20))) {
+										Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
+										displayRoute(threeRightTurns, true);
+									}							
+								}
+								checkEitherCounter++;
+							}
+						}
+						
+						else if (secondEdgeAngle < firstEdgeAngle) { // if second edge angle is between first and 0
+							Iterable<Edge> intersectionAdjList = graph.adj(firstEdgeW);
+							int checkEitherCounter = 1;
+							int intersectionID = -1;
+							double[] tempAdjIntersection;
+							double tempAdjAngle; 
+							
+							for (Edge adjEdge : intersectionAdjList) {
+								if (checkEitherCounter == 2) {
+									intersectionID = adjEdge.either();
+								}
+								
+								if (intersectionID == adjEdge.either()) {
+									
+									tempAdjIntersection = intersectionTree.search(adjEdge.other(adjEdge.either()));
+									double tempAdjIntersectionX = ((tempAdjIntersection[0] + 150.528512) / 0.000054142);
+									double tempAdjIntersectionY = ((tempAdjIntersection[1] - 38.247154) / (-0.0000561075));
+									tempAdjAngle = -Math.toDegrees(Math.atan2((tempAdjIntersectionY - middleIntersectionY), (tempAdjIntersectionX - middleIntersectionX)));
+									
+									if (tempAdjAngle < 0) {
+										tempAdjAngle += 360;
+									}
+									
+									if ((tempAdjAngle >= 0) && (tempAdjAngle <= secondEdgeAngle)) { 
+										Edge[] threeRightTurns = rightTurnLoop(intersectionAdjList,firstEdge);
+										displayRoute(threeRightTurns, true);
+									}
+								}
+								checkEitherCounter++;
+							}
+						}
+					}
+				}
+			}		
+		}
 	}
 	
 	// converts an input latitude longitude to ESRI meters to display on the map properly
@@ -765,11 +809,30 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 		});
 		toolBar.add(startPointButton);
 		
+		// add Stop button
+		stopButton = new JButton(STOP_BUTTON);
+		stopButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				stopHasBeenClicked = true;
+				stopSymbol.setOffsetY((float) 16); // shifts the picture upwards
+				HashMap<String, Object> attributes = new HashMap<String, Object>();
+			    attributes.put("type", "Stop");
+			    drawingOverlay.setUp(
+			        DrawingMode.POINT,
+			        stopSymbol, // the picutre for the stop
+			        attributes);
+			}
+		});
+		toolBar.add(stopButton);
+		stopButton.setEnabled(false);
+		
 		// add Destination button
 		destinationButton = new JButton(DESTINATION_BUTTON);
 		destinationButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				destinationHasBeenClicked = true;
 				destinationSymbol.setOffsetY((float) 16); // shifts the picture upwards
 				HashMap<String, Object> attributes = new HashMap<String, Object>();
 			    attributes.put("type", "Destination");
@@ -777,6 +840,7 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 			        DrawingMode.POINT,
 			        destinationSymbol, // the picture for the stop
 			        attributes);
+			    stopButton.setEnabled(false);
 			    destinationButton.setEnabled(false);
 			}
 		});
@@ -790,10 +854,11 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 			public void actionPerformed(ActionEvent e) {
 				// disable the toolbar buttons and overlay 
 				startPointButton.setEnabled(false);
+				stopButton.setEnabled(false);
 			    destinationButton.setEnabled(false);
 			    solveRouteButton.setEnabled(false);
 			    myDrawingOverlay.setEnabled(false);
-			    getRoute(graph, startPoint, endPoint);
+			    getRoute(graph, stopArray);
 			    leftTurnChecker();
 			}
 		});
@@ -807,12 +872,16 @@ public class MapGenerator { // TODO sort variables, keep only needed fields (mak
 			public void actionPerformed(ActionEvent e) {
 				// enable the toolbar buttons and overlay  
 			    startPointButton.setEnabled(true);
+			    stopButton.setEnabled(false);
 			    destinationButton.setEnabled(false);
 			    solveRouteButton.setEnabled(false);
 			    myDrawingOverlay.setEnabled(true);
+			    stopArray = new int[1];
+			    stopHasBeenClicked = false;
+				destinationHasBeenClicked = false;
 			    
 			    // reset graphic layers, stop features and global variables
-			    stopCounter = 2;
+			    stopCounter = 0;
 			    routeLayer.removeAll();
 			    stopsLayer.removeAll();
 			    stops.clearFeatures();
