@@ -1,11 +1,12 @@
 // CS 2XB3 Lab 2 - Final Project
-// Hassaan Malik -
-// Trevor Rae - 
+// Hassaan Malik - 1224997
+// Trevor Rae - 1324949
 // Paul Warnick - 1300963
 
 /*
  * Description:
  * 
+ * Used as a helper class for Edge Weighted Graph to create a collection of all the edges in the graph.
  */
 
 package graph;

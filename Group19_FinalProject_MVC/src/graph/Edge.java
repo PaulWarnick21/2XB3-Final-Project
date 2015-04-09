@@ -1,11 +1,12 @@
 // CS 2XB3 Lab 2 - Final Project
-// Hassaan Malik -
-// Trevor Rae - 
+// Hassaan Malik - 1224997
+// Trevor Rae - 1324949
 // Paul Warnick - 1300963
 
 /*
  * Description:
  * 
+ * Used as a helper for Edge Weighted Graph to create edges.
  */
 
 package graph;
@@ -25,7 +26,7 @@ public class Edge {
 	
 	public int either(){ return v; }
 	
-	public int getW() {return w;}
+	public int getW() { return w; }
 	
 	public int other(int vertex){
 		if(vertex == v){ return w; }

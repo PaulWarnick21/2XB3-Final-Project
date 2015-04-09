@@ -1,11 +1,13 @@
 // CS 2XB3 Lab 2 - Final Project
-// Hassaan Malik -
-// Trevor Rae - 
+// Hassaan Malik - 1224997
+// Trevor Rae - 1324949
 // Paul Warnick - 1300963
 
 /*
  * Description:
  * 
+ * This class is used to create an Edge Weighted Graph for all of the roads on the map. 
+ * This allows us to use Dijkstra's algorithm to find the shortest path.
  */
 
 package graph;

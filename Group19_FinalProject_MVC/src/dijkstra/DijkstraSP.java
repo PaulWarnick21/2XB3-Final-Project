@@ -1,11 +1,13 @@
 // CS 2XB3 Lab 2 - Final Project
-// Hassaan Malik -
-// Trevor Rae - 
+// Hassaan Malik - 1224997
+// Trevor Rae - 1324949
 // Paul Warnick - 1300963
 
 /*
  * Description:
  * 
+ * Dijkstra's Algorithm is used to find the shortest path from point A to point B. By giving the algorithm two edges to recursively goes through the main graph and
+ * compares the weight of each edge, then it returns an array of edges. 
  */
 
 package dijkstra;
@@ -13,7 +15,6 @@ package dijkstra;
 import graph.Edge;
 import graph.EdgeWeightedGraph;
 import java.util.Stack;
-
 
 public class DijkstraSP {
     private double[] distTo;          // distTo[v] = distance  of shortest s->v path
