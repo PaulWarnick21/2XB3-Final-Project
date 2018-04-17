@@ -1,4 +1,3 @@
-# 2XB3-Final-Project
-No Left Turn Route Application
+# No Left Turn Route Application
 
 Left turns waste a lot of time and gas since the driver is doing nothing but waiting to make their turn against the flow of traffic. In some cases the driver will wait two or three light changes before they can actually make the turn. This makes driving route inefficient and by driving straight and making three rights turns instead and save gas and even save the driver a lot of time. This would be ideal for anyone going to multiple points in a city such as a delivery trucks, home repair calls, cleaning services etc. This application will use the ArcGIS API to get the locations the user needs to go to and display the route the without any left turns. By using is application the user will be able to save time when doing their job, complete more tasks as well as save gas. 
